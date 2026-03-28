@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>💌 留下你的生日祝福</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap');
+
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html{height:100%}
+  body{
+    font-family:'Noto Sans TC',sans-serif;min-height:100%;
+    background:linear-gradient(135deg,#fce4ec 0%,#f8bbd0 30%,#e1bee7 60%,#f3e5f5 100%);
+    display:flex;flex-direction:column;align-items:center;
+    padding:24px 16px env(safe-area-inset-bottom,24px);
+  }
+
+  .page-header{
+    text-align:center;margin-bottom:24px;
+    animation:fadeInUp .6s ease both;
+  }
+  .page-header h1{
+    font-family:'Dancing Script',cursive;font-size:clamp(28px,7vw,40px);
+    color:#880e4f;margin-bottom:6px;
+  }
+  .page-header p{
+    font-size:clamp(13px,3.5vw,16px);color:#ad1457;opacity:.8;
+  }
+
+  /* Form */
+  .wish-form{
+    width:100%;max-width:420px;
+    background:rgba(255,255,255,.8);backdrop-filter:blur(12px);
+    border-radius:20px;padding:24px 20px;
+    box-shadow:0 8px 40px rgba(136,14,79,.12);
+    animation:fadeInUp .6s ease .2s both;
+  }
+  .form-group{margin-bottom:16px}
+  .form-group label{
+    display:block;font-size:14px;font-weight:600;
+    color:#880e4f;margin-bottom:6px;
+  }
+  .form-group input,
+  .form-group textarea{
+    width:100%;padding:12px 16px;
+    border:2px solid #f8bbd0;border-radius:12px;
+    font-family:'Noto Sans TC',sans-serif;font-size:15px;
+    color:#4a1a3a;background:#fff;
+    transition:border-color .3s ease;
+    outline:none;
+  }
+  .form-group input:focus,
+  .form-group textarea:focus{
+    border-color:#ce93d8;
+  }
+  .form-group textarea{
+    height:120px;resize:vertical;line-height:1.6;
+  }
+  .form-group input::placeholder,
+  .form-group textarea::placeholder{color:#d1a3c4}
+
+  .char-count{
+    text-align:right;font-size:11px;color:#ce93d8;margin-top:4px;
+  }
+
+  .submit-btn{
+    width:100%;padding:14px;
+    background:linear-gradient(135deg,#f48fb1,#ce93d8);
+    color:#fff;border:none;border-radius:14px;
+    font-family:'Noto Sans TC',sans-serif;
+    font-size:16px;font-weight:600;
+    cursor:pointer;box-shadow:0 4px 20px rgba(244,143,177,.4);
+    transition:transform .2s ease,opacity .2s ease;
+    margin-top:8px;
+  }
+  .submit-btn:active{transform:scale(.97)}
+  .submit-btn:disabled{opacity:.5;cursor:not-allowed}
+
+  .status-msg{
+    text-align:center;padding:12px;margin-top:12px;
+    border-radius:12px;font-size:14px;
+    animation:fadeInUp .4s ease both;
+  }
+  .status-success{background:rgba(129,199,132,.2);color:#2e7d32}
+  .status-error{background:rgba(239,83,80,.15);color:#c62828}
+
+  /* Existing wishes */
+  .existing-wishes{
+    width:100%;max-width:420px;margin-top:28px;
+    animation:fadeInUp .6s ease .4s both;
+  }
+  .existing-wishes h2{
+    font-family:'Dancing Script',cursive;
+    font-size:clamp(20px,5vw,26px);
+    color:#880e4f;text-align:center;margin-bottom:14px;
+  }
+  .wishes-list{display:flex;flex-direction:column;gap:10px}
+  .wish-card{
+    background:rgba(255,255,255,.75);backdrop-filter:blur(8px);
+    border-radius:14px;padding:14px 16px;
+    box-shadow:0 2px 12px rgba(136,14,79,.08);
+    animation:fadeInUp .5s ease both;
+  }
+  .wish-card .wish-from{font-size:12px;color:#ad1457;font-weight:600;margin-bottom:4px}
+  .wish-card .wish-msg{font-size:14px;color:#4a1a3a;line-height:1.6}
+  .wish-card .wish-time{font-size:11px;color:#ce93d8;margin-top:6px;text-align:right}
+  .no-wishes{text-align:center;color:#ad1457;font-size:14px;padding:20px;opacity:.7}
+  .loading{text-align:center;padding:20px;color:#ad1457}
+  .spinner{display:inline-block;width:18px;height:18px;border:2px solid #f8bbd0;border-top-color:#880e4f;border-radius:50%;animation:spin .6s linear infinite;margin-right:6px;vertical-align:middle}
+
+  /* Back link */
+  .back-link{
+    margin-top:24px;margin-bottom:16px;
+    text-align:center;
+  }
+  .back-link a{
+    color:#880e4f;font-size:14px;text-decoration:none;
+    padding:10px 20px;border-radius:30px;
+    background:rgba(255,255,255,.6);
+    transition:background .3s ease;
+  }
+  .back-link a:hover{background:rgba(255,255,255,.9)}
+
+  /* Particles */
+  .particles{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:-1}
+  .particle{position:absolute;border-radius:50%;animation:floatUp linear infinite;opacity:.4}
+
+  @keyframes fadeInUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes floatUp{0%{transform:translateY(100vh) scale(0);opacity:0}10%{opacity:.4}90%{opacity:.2}100%{transform:translateY(-20vh) scale(1);opacity:0}}
+  @keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<div class="particles" id="bgParticles"></div>
+
+<div class="page-header">
+  <h1>💌 給蔡的生日祝福</h1>
+  <p>寫下你想對 Bianca 說的話吧！</p>
+</div>
+
+<div class="wish-form">
+  <div class="form-group">
+    <label>✨ 你的名字</label>
+    <input type="text" id="wishName" placeholder="叫我什麼都好～" maxlength="20">
+  </div>
+  <div class="form-group">
+    <label>💕 想說的話</label>
+    <textarea id="wishMessage" placeholder="生日快樂！在這裡寫下你的祝福..." maxlength="500" oninput="updateCharCount()"></textarea>
+    <div class="char-count"><span id="charCount">0</span>/500</div>
+  </div>
+  <button class="submit-btn" id="submitBtn" onclick="submitWish()">
+    送出祝福 💝
+  </button>
+  <div id="statusArea"></div>
+</div>
+
+<div class="existing-wishes">
+  <h2>✨ 已收到的祝福 ✨</h2>
+  <div class="wishes-list" id="wishesList">
+    <div class="loading" id="wishesLoading">
+      <span class="spinner"></span>載入中...
+    </div>
+  </div>
+</div>
+
+<div class="back-link">
+  <a href="index.html">🎂 前往生日驚喜頁面 →</a>
+</div>
+
+<script>
+const BLOB_API = 'https://jsonblob.com/api/jsonBlob';
+let blobId = location.hash.replace('#', '') || null;
+let wishesData = { wishes: [] };
+
+/* ====== PARTICLES ====== */
+(function(){
+  const el=document.getElementById('bgParticles');
+  const colors=['#f48fb1','#ce93d8','#fff','#f8bbd0','#e1bee7'];
+  for(let i=0;i<20;i++){
+    const p=document.createElement('div');p.className='particle';
+    const s=Math.random()*7+3;
+    Object.assign(p.style,{width:s+'px',height:s+'px',left:Math.random()*100+'%',
+      background:colors[Math.random()*colors.length|0],
+      animationDuration:(Math.random()*8+6)+'s',animationDelay:(Math.random()*5)+'s'});
+    el.appendChild(p);
+  }
+})();
+
+/* ====== INIT ====== */
+async function init() {
+  if (blobId) {
+    await loadWishes();
+  } else {
+    // Create new blob
+    try {
+      const res = await fetch(BLOB_API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({ wishes: [] })
+      });
+      if (!res.ok) throw new Error('create failed');
+      // jsonblob returns blob ID in the Location header
+      const loc = res.headers.get('Location');
+      blobId = loc ? loc.split('/').pop() : null;
+      if (!blobId) {
+        // Fallback: try to get from response
+        const data = await res.json();
+        blobId = data.id || null;
+      }
+      if (blobId) {
+        location.hash = blobId;
+        // Also save to localStorage so the main page can find it
+        try { localStorage.setItem('birthday_blob_id', blobId) } catch(e) {}
+      }
+    } catch(e) {
+      console.error('Failed to create blob:', e);
+    }
+    document.getElementById('wishesLoading').remove();
+    document.getElementById('wishesList').innerHTML = '<div class="no-wishes">還沒有祝福 — 你來當第一個吧！✨</div>';
+  }
+}
+
+async function loadWishes() {
+  const list = document.getElementById('wishesList');
+  const loading = document.getElementById('wishesLoading');
+
+  try {
+    const res = await fetch(BLOB_API + '/' + blobId, {
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }
+    });
+    if (!res.ok) throw new Error('load failed');
+    wishesData = await res.json();
+    if (loading) loading.remove();
+    renderWishes();
+    // Save blob id
+    try { localStorage.setItem('birthday_blob_id', blobId) } catch(e) {}
+  } catch(e) {
+    if (loading) loading.remove();
+    list.innerHTML = '<div class="no-wishes">載入失敗 😢 請重新整理頁面</div>';
+  }
+}
+
+function renderWishes() {
+  const list = document.getElementById('wishesList');
+  if (!wishesData.wishes || wishesData.wishes.length === 0) {
+    list.innerHTML = '<div class="no-wishes">還沒有祝福 — 你來當第一個吧！✨</div>';
+    return;
+  }
+  list.innerHTML = '';
+  // Show newest first
+  [...wishesData.wishes].reverse().forEach((w, i) => {
+    const card = document.createElement('div');
+    card.className = 'wish-card';
+    card.style.animationDelay = (i * 0.08) + 's';
+    card.innerHTML = `
+      <div class="wish-from">💌 來自 ${escHtml(w.from)}</div>
+      <div class="wish-msg">${escHtml(w.message)}</div>
+      ${w.time ? '<div class="wish-time">' + escHtml(w.time) + '</div>' : ''}
+    `;
+    list.appendChild(card);
+  });
+}
+
+function escHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s || '';
+  return d.innerHTML;
+}
+
+function updateCharCount() {
+  document.getElementById('charCount').textContent = document.getElementById('wishMessage').value.length;
+}
+
+async function submitWish() {
+  const nameEl = document.getElementById('wishName');
+  const msgEl = document.getElementById('wishMessage');
+  const btn = document.getElementById('submitBtn');
+  const status = document.getElementById('statusArea');
+
+  const name = nameEl.value.trim();
+  const message = msgEl.value.trim();
+
+  if (!name) { showStatus('請填寫你的名字哦！', 'error'); nameEl.focus(); return; }
+  if (!message) { showStatus('請寫下你的祝福！', 'error'); msgEl.focus(); return; }
+
+  if (!blobId) {
+    showStatus('系統準備中，請稍後再試...', 'error');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = '送出中...';
+
+  try {
+    // Re-fetch latest data to avoid overwrite
+    const getRes = await fetch(BLOB_API + '/' + blobId, {
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }
+    });
+    if (getRes.ok) {
+      wishesData = await getRes.json();
+    }
+
+    const now = new Date();
+    const timeStr = `${now.getMonth()+1}/${now.getDate()} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+
+    if (!wishesData.wishes) wishesData.wishes = [];
+    wishesData.wishes.push({ from: name, message: message, time: timeStr });
+
+    const putRes = await fetch(BLOB_API + '/' + blobId, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify(wishesData)
+    });
+
+    if (!putRes.ok) throw new Error('save failed');
+
+    showStatus('祝福送出成功！蔡會看到你的心意的 💕', 'success');
+    nameEl.value = '';
+    msgEl.value = '';
+    document.getElementById('charCount').textContent = '0';
+    renderWishes();
+  } catch (e) {
+    showStatus('送出失敗 😢 請再試一次', 'error');
+  }
+
+  btn.disabled = false;
+  btn.textContent = '送出祝福 💝';
+}
+
+function showStatus(msg, type) {
+  const area = document.getElementById('statusArea');
+  area.innerHTML = `<div class="status-msg status-${type}">${msg}</div>`;
+  setTimeout(() => { area.innerHTML = '' }, 4000);
+}
+
+init();
+</script>
+</body>
+</html>
