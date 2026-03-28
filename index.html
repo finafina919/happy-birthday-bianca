@@ -97,6 +97,85 @@
   .blow-bar-wrap.visible{opacity:1}
   .blow-bar{width:0%;height:100%;background:linear-gradient(90deg,#f48fb1,#ce93d8);border-radius:3px;transition:width .1s ease}
 
+  /* ====== PHASE 2.5: SPEECH CHALLENGE ====== */
+  #speechChallenge{
+    position:fixed;inset:0;display:none;flex-direction:column;
+    align-items:center;justify-content:center;
+    background:linear-gradient(180deg,#2d1b4e 0%,#1a0a2e 100%);
+    z-index:85;transition:opacity .8s ease;padding:24px 16px;
+    text-align:center;
+  }
+  #speechChallenge.active{display:flex}
+  #speechChallenge.hidden{opacity:0;pointer-events:none}
+
+  .speech-emoji{font-size:64px;margin-bottom:16px;animation:bounceIn .8s ease both}
+  .speech-title{
+    font-family:'Dancing Script',cursive;font-size:clamp(22px,6vw,34px);
+    color:#f8bbd0;text-shadow:0 0 20px rgba(248,187,208,.5);
+    margin-bottom:10px;animation:fadeInUp .8s ease .2s both;
+  }
+  .speech-instruction{
+    color:#ce93d8;font-size:clamp(14px,3.8vw,18px);
+    margin-bottom:24px;animation:fadeInUp .8s ease .4s both;line-height:1.6;
+  }
+  .speech-target{
+    font-size:clamp(20px,5.5vw,28px);font-weight:700;
+    color:#fff;background:rgba(244,143,177,.2);
+    border:2px solid rgba(244,143,177,.4);border-radius:16px;
+    padding:14px 24px;margin-bottom:20px;
+    animation:fadeInUp .8s ease .5s both,pulse 2s ease-in-out infinite;
+  }
+  .speech-counter{
+    display:flex;gap:14px;justify-content:center;margin-bottom:24px;
+    animation:fadeInUp .8s ease .6s both;
+  }
+  .counter-dot{
+    width:40px;height:40px;border-radius:50%;
+    border:3px solid rgba(206,147,216,.4);
+    display:flex;align-items:center;justify-content:center;
+    font-size:18px;color:#ce93d8;
+    transition:all .4s ease;
+  }
+  .counter-dot.filled{
+    background:linear-gradient(135deg,#f48fb1,#ce93d8);
+    border-color:#f48fb1;color:#fff;
+    transform:scale(1.15);
+    box-shadow:0 0 20px rgba(244,143,177,.5);
+  }
+  .speech-status{
+    color:#ba68c8;font-size:clamp(13px,3.5vw,15px);
+    min-height:24px;margin-bottom:16px;
+    animation:fadeInUp .8s ease .7s both;
+  }
+  .speech-mic-btn{
+    width:70px;height:70px;border-radius:50%;border:none;
+    background:linear-gradient(135deg,#f48fb1,#ce93d8);
+    color:#fff;font-size:28px;cursor:pointer;
+    box-shadow:0 4px 25px rgba(244,143,177,.5);
+    transition:transform .2s ease,box-shadow .2s ease;
+    animation:fadeInUp .8s ease .8s both;
+    position:relative;
+  }
+  .speech-mic-btn:active{transform:scale(.93)}
+  .speech-mic-btn.listening{
+    box-shadow:0 0 0 8px rgba(244,143,177,.2),0 0 0 16px rgba(244,143,177,.1),0 4px 25px rgba(244,143,177,.5);
+    animation:pulse 1s ease-in-out infinite;
+  }
+  .speech-fallback{
+    margin-top:20px;color:#ba68c8;font-size:12px;opacity:.7;
+    animation:fadeInUp .8s ease 1s both;
+  }
+  .speech-fallback button{
+    background:none;border:none;color:#f48fb1;
+    text-decoration:underline;cursor:pointer;font-size:12px;
+    font-family:'Noto Sans TC',sans-serif;
+  }
+  .speech-heard{
+    color:#f48fb1;font-size:clamp(12px,3vw,14px);
+    margin-top:8px;min-height:20px;opacity:.8;
+    transition:opacity .3s ease;
+  }
+
   /* ====== PHASE 3: CELEBRATION ====== */
   #celebration{
     position:fixed;inset:0;display:none;flex-direction:column;align-items:center;
@@ -274,6 +353,26 @@
   <div class="particles" id="cakeParticles"></div>
 </div>
 
+<!-- PHASE 2.5: SPEECH CHALLENGE -->
+<div id="speechChallenge">
+  <div class="speech-emoji">🎤</div>
+  <div class="speech-title">等等！還有一關～</div>
+  <div class="speech-instruction">壽星要大聲說出通關密語<br>說滿三次才能看驚喜哦！</div>
+  <div class="speech-target">「我是最可愛的壽星」</div>
+  <div class="speech-counter">
+    <div class="counter-dot" id="dot0">1</div>
+    <div class="counter-dot" id="dot1">2</div>
+    <div class="counter-dot" id="dot2">3</div>
+  </div>
+  <div class="speech-status" id="speechStatus">點麥克風開始說～</div>
+  <div class="speech-heard" id="speechHeard"></div>
+  <button class="speech-mic-btn" id="speechMicBtn" onclick="toggleSpeechRecog()">🎙️</button>
+  <div class="speech-fallback" id="speechFallback" style="display:none">
+    語音辨識不可用？<button onclick="manualSpeechPass()">點這裡手動通關</button>
+  </div>
+  <div class="particles" id="speechParticles"></div>
+</div>
+
 <!-- PHASE 3 -->
 <div id="celebration">
   <div class="celebration-content">
@@ -324,6 +423,10 @@ const PRE_WISHES = [
   {
     from: '小宥',
     message: '蔡，認識你十年了欸，我們從小一認識起到現在，覺得時間過好快。看著你跟你哥一起在台北打拼，每次都不忘回羅東陪媽媽（還是是耍廢），真的覺得你很了不起。最近你換了新工作，真的替你開心，你值得所有好的事情。謝謝你一直都在，不管多忙都還是那個願意陪我玩、聽我講廢話的蔡。新的一歲，希望你工作順利、跟還有你哥、媽媽都健健康康的，然後我們繼續一起吃吃喝喝走下去。生日快樂，我很珍惜你哦。生快！'
+  },
+  {
+    from: '小宥的姊姊',
+    message: '蔡，雖然我們不算太常見面，但每次聽小宥講到你的事，都覺得你是一個很溫暖的人。能被我妹珍惜十年的朋友，一定是很棒的人吧。聽說你最近換了很好的新工作，恭喜你！生日快樂，希望新的一歲一切都順順的。以後有機會再一起吃飯呀～'
   },
 ];
 
@@ -382,6 +485,7 @@ function mkParts(id, n, colors) {
 }
 mkParts('landingParticles', 25, ['#f48fb1','#ce93d8','#fff','#f8bbd0','#e1bee7']);
 mkParts('cakeParticles', 18, ['#f48fb1','#ce93d8','#ffeb3b','#ff9800']);
+mkParts('speechParticles', 15, ['#f48fb1','#ce93d8','#fff','#e1bee7']);
 
 /* ====== CONFETTI ====== */
 const cC = document.getElementById('confetti');
@@ -433,13 +537,154 @@ function detectBlow(){
   requestAnimationFrame(detectBlow);
 }
 
-/* ====== CELEBRATION ====== */
+/* ====== TRANSITION: CAKE → SPEECH CHALLENGE ====== */
 function goToCelebration(){
-  phase=3;document.getElementById('cakeGlow').style.opacity='0';
+  // Now goes to speech challenge first!
+  phase=2.5;document.getElementById('cakeGlow').style.opacity='0';
   if(ms)ms.getTracks().forEach(t=>t.stop());if(ac)ac.close();
   const cs=document.getElementById('cakeScene');cs.classList.add('hidden');
   setTimeout(()=>{
     cs.style.display='none';
+    document.getElementById('speechChallenge').classList.add('active');
+    initSpeechRecog();
+  },800);
+}
+
+/* ====== SPEECH RECOGNITION CHALLENGE ====== */
+let speechCount = 0;
+let recognition = null;
+let isListening = false;
+const TARGET_PHRASE = '我是最可愛的壽星';
+
+function initSpeechRecog() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    document.getElementById('speechFallback').style.display = 'block';
+    document.getElementById('speechStatus').textContent = '你的瀏覽器不支援語音辨識 😢';
+    return;
+  }
+  recognition = new SpeechRecognition();
+  recognition.lang = 'zh-TW';
+  recognition.interimResults = true;
+  recognition.continuous = true;
+  recognition.maxAlternatives = 5;
+
+  recognition.onresult = (event) => {
+    let transcript = '';
+    let isFinal = false;
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const result = event.results[i];
+      // Check all alternatives
+      for (let j = 0; j < result.length; j++) {
+        const alt = result[j].transcript.replace(/\s/g, '');
+        if (alt.includes(TARGET_PHRASE) || matchFuzzy(alt, TARGET_PHRASE)) {
+          transcript = alt;
+          if (result.isFinal) isFinal = true;
+          break;
+        }
+      }
+      if (!transcript) transcript = result[0].transcript.replace(/\s/g, '');
+      if (result.isFinal) isFinal = true;
+    }
+
+    document.getElementById('speechHeard').textContent = '聽到：' + transcript;
+
+    if (isFinal && (transcript.includes(TARGET_PHRASE) || matchFuzzy(transcript, TARGET_PHRASE))) {
+      speechCount++;
+      fillDot(speechCount - 1);
+      document.getElementById('speechStatus').textContent =
+        speechCount >= 3 ? '通關！🎉🎉🎉' : `太棒了！${speechCount}/3 ✨`;
+      if (speechCount >= 3) {
+        if (recognition) recognition.stop();
+        isListening = false;
+        document.getElementById('speechMicBtn').classList.remove('listening');
+        setTimeout(goToRealCelebration, 1200);
+        return;
+      }
+    } else if (isFinal) {
+      document.getElementById('speechStatus').textContent = '再試一次～大聲說出來！';
+    }
+  };
+
+  recognition.onerror = (e) => {
+    console.log('Speech error:', e.error);
+    if (e.error === 'not-allowed') {
+      document.getElementById('speechStatus').textContent = '請允許麥克風權限哦～';
+      document.getElementById('speechFallback').style.display = 'block';
+    } else if (e.error === 'no-speech') {
+      document.getElementById('speechStatus').textContent = '沒聽到聲音，再說一次～';
+    }
+    isListening = false;
+    document.getElementById('speechMicBtn').classList.remove('listening');
+  };
+
+  recognition.onend = () => {
+    // Auto-restart if still in speech phase and not done
+    if (isListening && speechCount < 3 && phase === 2.5) {
+      try { recognition.start(); } catch(e) {}
+    } else {
+      isListening = false;
+      document.getElementById('speechMicBtn').classList.remove('listening');
+    }
+  };
+}
+
+function matchFuzzy(input, target) {
+  // Fuzzy match: allow minor recognition errors
+  const cleaned = input.replace(/[，。！？、\s]/g, '');
+  // Check if it contains core keywords
+  const keywords = ['最可愛', '壽星'];
+  return keywords.every(k => cleaned.includes(k));
+}
+
+function toggleSpeechRecog() {
+  if (!recognition) {
+    // No speech recognition, show fallback
+    document.getElementById('speechFallback').style.display = 'block';
+    return;
+  }
+  if (isListening) {
+    recognition.stop();
+    isListening = false;
+    document.getElementById('speechMicBtn').classList.remove('listening');
+    document.getElementById('speechStatus').textContent = '暫停中，點麥克風繼續～';
+  } else {
+    try {
+      recognition.start();
+      isListening = true;
+      document.getElementById('speechMicBtn').classList.add('listening');
+      document.getElementById('speechStatus').textContent = '聽你說...🎤';
+    } catch(e) {
+      document.getElementById('speechStatus').textContent = '啟動失敗，請重新點一下';
+    }
+  }
+}
+
+function fillDot(index) {
+  const dot = document.getElementById('dot' + index);
+  if (dot) {
+    dot.classList.add('filled');
+    dot.textContent = '✓';
+  }
+}
+
+function manualSpeechPass() {
+  // Fallback: manually advance each press
+  speechCount++;
+  fillDot(speechCount - 1);
+  document.getElementById('speechStatus').textContent =
+    speechCount >= 3 ? '通關！🎉🎉🎉' : `${speechCount}/3 — 再按！`;
+  if (speechCount >= 3) {
+    setTimeout(goToRealCelebration, 1000);
+  }
+}
+
+/* ====== REAL CELEBRATION ====== */
+function goToRealCelebration(){
+  phase=3;
+  const sc=document.getElementById('speechChallenge');sc.classList.add('hidden');
+  setTimeout(()=>{
+    sc.style.display='none';
     const cel=document.getElementById('celebration');cel.classList.add('active');
     launchConfetti();
     const vid=document.getElementById('birthdayVideo');vid.play().catch(()=>{});
@@ -520,11 +765,17 @@ function goToWishPage() {
 
 /* ====== REPLAY ====== */
 function replayAll(){
-  phase=1;lit=Array(N).fill(true);bp=0;
+  phase=1;lit=Array(N).fill(true);bp=0;speechCount=0;isListening=false;
+  if(recognition)try{recognition.stop()}catch(e){}
   for(let i=0;i<N;i++)document.getElementById('flame'+i).classList.remove('out');
+  for(let i=0;i<3;i++){const d=document.getElementById('dot'+i);d.classList.remove('filled');d.textContent=i+1}
+  document.getElementById('speechStatus').textContent='點麥克風開始說～';
+  document.getElementById('speechHeard').textContent='';
+  document.getElementById('speechMicBtn').classList.remove('listening');
   const vid=document.getElementById('birthdayVideo');vid.pause();vid.currentTime=0;
   document.getElementById('subtitleText').classList.remove('visible');
   document.getElementById('celebration').classList.remove('active');
+  const sc=document.getElementById('speechChallenge');sc.style.display='';sc.classList.remove('active','hidden');
   const cs=document.getElementById('cakeScene');cs.style.display='';cs.classList.remove('active','hidden');
   document.getElementById('cakeGlow').style.opacity='1';
   document.getElementById('blowBarWrap').classList.remove('visible');
