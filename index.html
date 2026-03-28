@@ -314,9 +314,18 @@
 </div>
 
 <script>
-/* ====== CONFIG ====== */
-const BLOB_API = 'https://jsonblob.com/api/jsonBlob';
-let blobId = null;
+/* ====== CONFIG — 填入你的 Google Sheet ID 就能顯示朋友的祝福 ====== */
+/* 教學裡有教怎麼拿到 SHEET_ID，填進去就好 */
+const GOOGLE_SHEET_ID = '';  // ← 貼上你的 Google Sheet ID
+const GOOGLE_FORM_URL = '';  // ← 貼上你的 Google Form 網址
+
+/* ====== 預寫的祝福（直接顯示在祝福牆上） ====== */
+const PRE_WISHES = [
+  {
+    from: '小宥',
+    message: '蔡，認識你十年了欸，我們從小一認識起到現在，覺得時間過好快。看著你跟你哥一起在台北打拼，每次都不忘回羅東陪媽媽（還是是耍廢），真的覺得你很了不起。最近你換了新工作，真的替你開心，你值得所有好的事情。謝謝你一直都在，不管多忙都還是那個願意陪我玩、聽我講廢話的蔡。新的一歲，希望你工作順利、跟還有你哥、媽媽都健健康康的，然後我們繼續一起吃吃喝喝走下去。生日快樂，我很珍惜你哦。生快！'
+  },
+];
 
 /* ====== SUBTITLES — synced to video timeline ====== */
 const subtitles = [
@@ -440,68 +449,73 @@ function goToCelebration(){
   },800);
 }
 
-/* ====== WISH WALL — jsonblob.com ====== */
-function getBlobId() {
-  // Check URL hash first
-  const hash = location.hash.replace('#','');
-  const params = new URLSearchParams(hash);
-  if (params.has('wishes')) return params.get('wishes');
-  // Check if wish page set it
-  try { return localStorage.getItem('birthday_blob_id') } catch(e) { return null }
+/* ====== WISH WALL — Google Sheets + 預寫祝福 ====== */
+function escHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s || '';
+  return d.innerHTML;
+}
+
+function renderWishCard(w, i) {
+  const card = document.createElement('div');
+  card.className = 'wish-card';
+  card.style.animationDelay = (i * 0.1) + 's';
+  card.innerHTML = `
+    <div class="wish-from">💌 來自 ${escHtml(w.from)}</div>
+    <div class="wish-msg">${escHtml(w.message)}</div>
+    ${w.time ? '<div class="wish-time">' + escHtml(w.time) + '</div>' : ''}
+  `;
+  return card;
 }
 
 async function loadWishes() {
   const container = document.getElementById('wishesContainer');
   const loading = document.getElementById('wishesLoading');
-  blobId = getBlobId();
+  if (loading) loading.remove();
+  container.innerHTML = '';
 
-  if (!blobId) {
-    loading.remove();
+  let allWishes = [...PRE_WISHES];
+
+  // Try loading from Google Sheets if configured
+  if (GOOGLE_SHEET_ID) {
+    try {
+      const url = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/gviz/tq?tqx=out:json`;
+      const res = await fetch(url);
+      const text = await res.text();
+      // Google returns JSONP-like: google.visualization.Query.setResponse({...})
+      const json = JSON.parse(text.match(/\{.*\}/s)[0]);
+      if (json.table && json.table.rows) {
+        json.table.rows.forEach(row => {
+          const cells = row.c;
+          if (cells && cells.length >= 3) {
+            allWishes.push({
+              from: cells[1] ? cells[1].v : '匿名',
+              message: cells[2] ? cells[2].v : '',
+              time: cells[0] ? cells[0].f || cells[0].v : ''
+            });
+          }
+        });
+      }
+    } catch(e) {
+      console.log('Google Sheet load failed:', e);
+    }
+  }
+
+  if (allWishes.length === 0) {
     container.innerHTML = '<div class="no-wishes">還沒有祝福留言哦～<br>把留言連結分享給朋友們吧！</div>';
     return;
   }
 
-  try {
-    const res = await fetch(BLOB_API + '/' + blobId, {
-      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }
-    });
-    if (!res.ok) throw new Error('fetch failed');
-    const data = await res.json();
-    loading.remove();
-
-    if (!data.wishes || data.wishes.length === 0) {
-      container.innerHTML = '<div class="no-wishes">還沒有祝福留言哦～<br>把留言連結分享給朋友們吧！</div>';
-      return;
-    }
-
-    container.innerHTML = '';
-    data.wishes.forEach((w, i) => {
-      const card = document.createElement('div');
-      card.className = 'wish-card';
-      card.style.animationDelay = (i * 0.1) + 's';
-      card.innerHTML = `
-        <div class="wish-from">💌 來自 ${escHtml(w.from)}</div>
-        <div class="wish-msg">${escHtml(w.message)}</div>
-        ${w.time ? '<div class="wish-time">' + escHtml(w.time) + '</div>' : ''}
-      `;
-      container.appendChild(card);
-    });
-  } catch (e) {
-    loading.remove();
-    container.innerHTML = '<div class="no-wishes">載入祝福時發生問題 😢<br>請檢查網路連線後重新整理</div>';
-  }
-}
-
-function escHtml(s) {
-  const d = document.createElement('div');
-  d.textContent = s;
-  return d.innerHTML;
+  allWishes.forEach((w, i) => container.appendChild(renderWishCard(w, i)));
 }
 
 function goToWishPage() {
-  const base = location.href.replace(/index\.html.*$/, '').replace(/#.*$/, '');
-  const wishUrl = base + 'wish.html' + (blobId ? '#' + blobId : '');
-  window.open(wishUrl, '_blank');
+  if (GOOGLE_FORM_URL) {
+    window.open(GOOGLE_FORM_URL, '_blank');
+  } else {
+    const base = location.href.replace(/index\.html.*$/, '').replace(/#.*$/, '');
+    window.open(base + 'wish.html', '_blank');
+  }
 }
 
 /* ====== REPLAY ====== */
