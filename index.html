@@ -357,8 +357,8 @@
 <div id="speechChallenge">
   <div class="speech-emoji">🎤</div>
   <div class="speech-title">等等！還有一關～</div>
-  <div class="speech-instruction">壽星要大聲說出通關密語<br>說滿三次才能看驚喜哦！</div>
-  <div class="speech-target">「我是最可愛的壽星」</div>
+  <div class="speech-instruction">壽星要大聲說出通關密語<br>三關都過才能看驚喜哦！</div>
+  <div class="speech-target" id="speechTarget">「我是最可愛的壽星」</div>
   <div class="speech-counter">
     <div class="counter-dot" id="dot0">1</div>
     <div class="counter-dot" id="dot1">2</div>
@@ -554,9 +554,24 @@ function goToCelebration(){
 let speechCount = 0;
 let recognition = null;
 let isListening = false;
-const TARGET_PHRASE = '我是最可愛的壽星';
+const PHRASES = [
+  { text: '我是最可愛的壽星', keywords: ['最可愛', '壽星'] },
+  { text: '我是最性感的壽星', keywords: ['最性感', '壽星'] },
+  { text: '我發誓我有錢一定讓朋友過好日子', keywords: ['發誓', '朋友', '好日子'] },
+];
+
+function updateSpeechTarget() {
+  const targetEl = document.getElementById('speechTarget');
+  if (speechCount < 3) {
+    targetEl.textContent = '「' + PHRASES[speechCount].text + '」';
+    targetEl.style.animation = 'none';
+    targetEl.offsetHeight; // force reflow
+    targetEl.style.animation = 'fadeInUp .5s ease both, pulse 2s ease-in-out infinite';
+  }
+}
 
 function initSpeechRecog() {
+  updateSpeechTarget();
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
     document.getElementById('speechFallback').style.display = 'block';
@@ -570,14 +585,15 @@ function initSpeechRecog() {
   recognition.maxAlternatives = 5;
 
   recognition.onresult = (event) => {
+    const current = PHRASES[speechCount];
+    if (!current) return;
     let transcript = '';
     let isFinal = false;
     for (let i = event.resultIndex; i < event.results.length; i++) {
       const result = event.results[i];
-      // Check all alternatives
       for (let j = 0; j < result.length; j++) {
         const alt = result[j].transcript.replace(/\s/g, '');
-        if (alt.includes(TARGET_PHRASE) || matchFuzzy(alt, TARGET_PHRASE)) {
+        if (alt.includes(current.text) || matchFuzzy(alt, current.keywords)) {
           transcript = alt;
           if (result.isFinal) isFinal = true;
           break;
@@ -589,20 +605,22 @@ function initSpeechRecog() {
 
     document.getElementById('speechHeard').textContent = '聽到：' + transcript;
 
-    if (isFinal && (transcript.includes(TARGET_PHRASE) || matchFuzzy(transcript, TARGET_PHRASE))) {
+    if (isFinal && (transcript.includes(current.text) || matchFuzzy(transcript, current.keywords))) {
+      fillDot(speechCount);
       speechCount++;
-      fillDot(speechCount - 1);
-      document.getElementById('speechStatus').textContent =
-        speechCount >= 3 ? '通關！🎉🎉🎉' : `太棒了！${speechCount}/3 ✨`;
       if (speechCount >= 3) {
+        document.getElementById('speechStatus').textContent = '通關！🎉🎉🎉';
+        document.getElementById('speechTarget').textContent = '🎉 恭喜過關！🎉';
         if (recognition) recognition.stop();
         isListening = false;
         document.getElementById('speechMicBtn').classList.remove('listening');
         setTimeout(goToRealCelebration, 1200);
         return;
       }
+      document.getElementById('speechStatus').textContent = '太棒了！下一關～ ✨';
+      updateSpeechTarget();
     } else if (isFinal) {
-      document.getElementById('speechStatus').textContent = '再試一次～大聲說出來！';
+      document.getElementById('speechStatus').textContent = '不對哦～再說一次！';
     }
   };
 
@@ -619,7 +637,6 @@ function initSpeechRecog() {
   };
 
   recognition.onend = () => {
-    // Auto-restart if still in speech phase and not done
     if (isListening && speechCount < 3 && phase === 2.5) {
       try { recognition.start(); } catch(e) {}
     } else {
@@ -629,17 +646,13 @@ function initSpeechRecog() {
   };
 }
 
-function matchFuzzy(input, target) {
-  // Fuzzy match: allow minor recognition errors
+function matchFuzzy(input, keywords) {
   const cleaned = input.replace(/[，。！？、\s]/g, '');
-  // Check if it contains core keywords
-  const keywords = ['最可愛', '壽星'];
   return keywords.every(k => cleaned.includes(k));
 }
 
 function toggleSpeechRecog() {
   if (!recognition) {
-    // No speech recognition, show fallback
     document.getElementById('speechFallback').style.display = 'block';
     return;
   }
@@ -669,13 +682,15 @@ function fillDot(index) {
 }
 
 function manualSpeechPass() {
-  // Fallback: manually advance each press
+  fillDot(speechCount);
   speechCount++;
-  fillDot(speechCount - 1);
-  document.getElementById('speechStatus').textContent =
-    speechCount >= 3 ? '通關！🎉🎉🎉' : `${speechCount}/3 — 再按！`;
   if (speechCount >= 3) {
+    document.getElementById('speechStatus').textContent = '通關！🎉🎉🎉';
+    document.getElementById('speechTarget').textContent = '🎉 恭喜過關！🎉';
     setTimeout(goToRealCelebration, 1000);
+  } else {
+    document.getElementById('speechStatus').textContent = `${speechCount}/3 — 下一關！`;
+    updateSpeechTarget();
   }
 }
 
@@ -771,6 +786,7 @@ function replayAll(){
   for(let i=0;i<3;i++){const d=document.getElementById('dot'+i);d.classList.remove('filled');d.textContent=i+1}
   document.getElementById('speechStatus').textContent='點麥克風開始說～';
   document.getElementById('speechHeard').textContent='';
+  document.getElementById('speechTarget').textContent='「' + PHRASES[0].text + '」';
   document.getElementById('speechMicBtn').classList.remove('listening');
   const vid=document.getElementById('birthdayVideo');vid.pause();vid.currentTime=0;
   document.getElementById('subtitleText').classList.remove('visible');
